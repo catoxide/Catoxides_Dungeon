@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "catoxidesdungeon:block/zombie_tomb_1"
+    },
+    "facing=north": {
+      "model": "catoxidesdungeon:block/zombie_tomb_2"
+    },
+    "facing=south": {
+      "model": "catoxidesdungeon:block/zombie_tomb_3"
+    },
+    "facing=west": {
+      "model": "catoxidesdungeon:block/zombie_tomb_4"
+    }
+  }
+}
