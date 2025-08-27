@@ -17,9 +17,13 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -43,6 +47,8 @@ public class CatoxidesDungeon {
         // 注册其他事件监听器
         MinecraftForge.EVENT_BUS.register(this);
 
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modEventBus.addListener(this::onCommonSetup);
     }
 
     @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -342,12 +348,20 @@ public class CatoxidesDungeon {
             });
         }
     }
+    @SubscribeEvent
+    public void onCommonSetup(FMLCommonSetupEvent event) {
+        // 初始化可转换方块列表
+        initializeConvertibleBlocks();
+    }
     // 初始化可转换方块集合
     private static final Set<Block> CONVERTIBLE_BLOCKS = new HashSet<>();
     // 添加一个处理中的标记，防止递归调用
     private static final Set<BlockPos> PROCESSING_POSITIONS = new HashSet<>();
 
-    private void initializeConvertibleBlocks() {
+    private static void initializeConvertibleBlocks() {
+        // 清空集合，防止重复初始化时重复添加
+        CONVERTIBLE_BLOCKS.clear();
+
         // 添加需要转换为废墟方块的方块
         CONVERTIBLE_BLOCKS.add(ModBlocks.ANCIENT_STONE.get());
         CONVERTIBLE_BLOCKS.add(ModBlocks.ANCIENT_COBBLESTONE.get());
@@ -355,9 +369,17 @@ public class CatoxidesDungeon {
         // 添加更多需要转换的方块...
 
         LOGGER.info("Initialized {} convertible blocks", CONVERTIBLE_BLOCKS.size());
+
+        // 调试输出所有可转换方块
+        for (Block block : CONVERTIBLE_BLOCKS) {
+            ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+            if (id != null) {
+                LOGGER.debug("Convertible block: {}", id);
+            }
+        }
     }
 
-    // 监听玩家破坏事件 - 使用高优先级确保在其他处理前执行
+    // 监听玩家破坏事件
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onBlockBreak(BlockEvent.BreakEvent event) {
         Player player = event.getPlayer();
@@ -372,6 +394,7 @@ public class CatoxidesDungeon {
 
         // 检查是否是僵尸巢穴
         if (state.getBlock() instanceof ZombieTombBlock) {
+            LOGGER.info("Zombie tomb block break detected at {}", pos);
             // 检查是否使用特殊方式破坏
             if (!ZombieTombBlock.shouldBreak(level, pos)) {
                 // 如果不是特殊方式，取消破坏事件
@@ -382,11 +405,14 @@ public class CatoxidesDungeon {
                 }
             }
             // 如果是特殊方式破坏，让事件正常进行
-            return;
+//            return;
         }
 
         // 记录被破坏的方块信息
         ResourceLocation blockId = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+
+        // 调试日志 - 记录所有被破坏的方块
+        LOGGER.debug("Block broken: {} at {}", blockId, pos);
 
         // 检查是否是模组内的方块且不是废墟方块
         if (blockId != null && blockId.getNamespace().equals(CatoxidesDungeon.MODID) &&
@@ -397,12 +423,12 @@ public class CatoxidesDungeon {
                 LOGGER.info("Player breaking convertible block: {} at {}", blockId, pos);
 
                 // 检查是否使用精准采集
-                boolean usingSilkTouch = player != null &&
-                        player.getMainHandItem().getEnchantmentLevel(Enchantments.SILK_TOUCH) > 0;
-
-                if (!usingSilkTouch) {
-                    // 取消原事件
-                    event.setCanceled(true);
+//                boolean usingSilkTouch = player != null &&
+//                        player.getMainHandItem().getEnchantmentLevel(Enchantments.SILK_TOUCH) > 0;
+//
+//                if (!usingSilkTouch) {
+//                    // 取消原事件
+                   event.setCanceled(true);
 
                     // 标记为正在处理，防止递归
                     PROCESSING_POSITIONS.add(pos.immutable());
@@ -417,20 +443,31 @@ public class CatoxidesDungeon {
                         // 设置方块实体数据
                         if (level.getBlockEntity(pos) instanceof AncientRuinedBlockEntity ruinedEntity) {
                             ruinedEntity.setOriginalBlock(state.getBlock());
+                            LOGGER.info("Set original block in ruined entity: {}", blockId);
                         }
                     } else {
                         // 直接破坏方块，触发正常的掉落
                         level.destroyBlock(pos, true, player);
+                        LOGGER.info("Directly destroyed block: {}", blockId);
                     }
 
                     // 处理完成，移除标记
                     PROCESSING_POSITIONS.remove(pos);
-                }
+//                   }
+//                else {
+//                    LOGGER.info("Block broken with silk touch, no conversion: {}", blockId);
+//                }
+            } else {
+                LOGGER.debug("Block {} is not in convertible list", blockId);
             }
+        } else {
+//            if (blockId != null) {
+                LOGGER.debug("Block {} is not from this mod or is already ruined", blockId);
+//            }
         }
     }
 
-    // 监听爆炸事件 - 使用高优先级
+    // 监听爆炸事件
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onExplosionDetonate(ExplosionEvent.Detonate event) {
         Level level = event.getLevel();
@@ -479,6 +516,7 @@ public class CatoxidesDungeon {
             PROCESSING_POSITIONS.add(pos.immutable());
 
             BlockState originalState = level.getBlockState(pos);
+            ResourceLocation originalBlockId = ForgeRegistries.BLOCKS.getKey(originalState.getBlock());
 
             // 概率生成废墟方块
             if (level.random.nextFloat() < 0.3f) {
@@ -489,11 +527,12 @@ public class CatoxidesDungeon {
                 if (level.getBlockEntity(pos) instanceof AncientRuinedBlockEntity ruinedEntity) {
                     ruinedEntity.setOriginalBlock(originalState.getBlock());
                     LOGGER.info("Set original block in ruined entity from explosion: {}",
-                            ForgeRegistries.BLOCKS.getKey(originalState.getBlock()));
+                            originalBlockId);
                 }
             } else {
                 // 直接破坏方块
                 level.destroyBlock(pos, false); // 不掉落物品，因为爆炸通常不会掉落物品
+                LOGGER.info("Directly destroyed block from explosion: {}", originalBlockId);
             }
 
             // 处理完成，移除标记
