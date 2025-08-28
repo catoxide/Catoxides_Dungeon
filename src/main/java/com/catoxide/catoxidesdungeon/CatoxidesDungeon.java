@@ -1,6 +1,7 @@
 package com.catoxide.catoxidesdungeon;
 
-import com.catoxide.catoxidesdungeon.blocks.AncientRuinedBlockEntity;
+
+import com.catoxide.catoxidesdungeon.blocks.BlockConversionTable;
 import com.catoxide.catoxidesdungeon.blocks.ZombieTombBlock;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
@@ -405,7 +406,7 @@ public class CatoxidesDungeon {
                 }
             }
             // 如果是特殊方式破坏，让事件正常进行
-//            return;
+            return;
         }
 
         // 记录被破坏的方块信息
@@ -433,23 +434,22 @@ public class CatoxidesDungeon {
                     // 标记为正在处理，防止递归
                     PROCESSING_POSITIONS.add(pos.immutable());
 
-                    // 概率生成废墟方块 (例如 30% 概率)
-                    if (level.random.nextFloat() < 0.3f) {
-                        LOGGER.info("Creating ruined block from player break");
-                        // 先移除原方块，再设置新方块
-                        level.removeBlock(pos, false);
-                        level.setBlock(pos, ModBlocks.ANCIENT_RUINED_BLOCK.get().defaultBlockState(), 3);
+                if (level.random.nextFloat() < 0.3f) {
+                    LOGGER.info("Creating ruined block from player break");
 
-                        // 设置方块实体数据
-                        if (level.getBlockEntity(pos) instanceof AncientRuinedBlockEntity ruinedEntity) {
-                            ruinedEntity.setOriginalBlock(state.getBlock());
-                            LOGGER.info("Set original block in ruined entity: {}", blockId);
-                        }
-                    } else {
-                        // 直接破坏方块，触发正常的掉落
-                        level.destroyBlock(pos, true, player);
-                        LOGGER.info("Directly destroyed block: {}", blockId);
-                    }
+                    // 使用转换表获取对应的废墟方块
+                    Block ruinedBlock = BlockConversionTable.getRuinedBlock(state.getBlock());
+
+                    // 先移除原方块，再设置新方块
+                    level.removeBlock(pos, false);
+                    level.setBlock(pos, ruinedBlock.defaultBlockState(), 3);
+
+                    LOGGER.info("Converted block to ruined variant: {}", ForgeRegistries.BLOCKS.getKey(ruinedBlock));
+                } else {
+                    // 直接破坏方块，触发正常的掉落
+                    level.destroyBlock(pos, true, player);
+                    LOGGER.info("Directly destroyed block: {}", ForgeRegistries.BLOCKS.getKey(state.getBlock()));
+                }
 
                     // 处理完成，移除标记
                     PROCESSING_POSITIONS.remove(pos);
@@ -470,6 +470,7 @@ public class CatoxidesDungeon {
     // 监听爆炸事件
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onExplosionDetonate(ExplosionEvent.Detonate event) {
+        //TODO:爆炸mod
         Level level = event.getLevel();
         Explosion explosion = event.getExplosion();
 
@@ -518,21 +519,22 @@ public class CatoxidesDungeon {
             BlockState originalState = level.getBlockState(pos);
             ResourceLocation originalBlockId = ForgeRegistries.BLOCKS.getKey(originalState.getBlock());
 
-            // 概率生成废墟方块
+// 概率生成废墟方块
             if (level.random.nextFloat() < 0.3f) {
-                // 先移除原方块
-                level.removeBlock(pos, false);
-                level.setBlock(pos, ModBlocks.ANCIENT_RUINED_BLOCK.get().defaultBlockState(), 3);
+                // 使用转换表获取对应的废墟方块
+                Block ruinedBlock = BlockConversionTable.getRuinedBlock(originalState.getBlock());
 
-                if (level.getBlockEntity(pos) instanceof AncientRuinedBlockEntity ruinedEntity) {
-                    ruinedEntity.setOriginalBlock(originalState.getBlock());
-                    LOGGER.info("Set original block in ruined entity from explosion: {}",
-                            originalBlockId);
-                }
+                // 先移除原方块，再设置新方块
+                level.removeBlock(pos, false);
+                level.setBlock(pos, ruinedBlock.defaultBlockState(), 3);
+
+                LOGGER.info("Converted block to ruined variant from explosion: {}",
+                        ForgeRegistries.BLOCKS.getKey(ruinedBlock));
             } else {
                 // 直接破坏方块
                 level.destroyBlock(pos, false); // 不掉落物品，因为爆炸通常不会掉落物品
-                LOGGER.info("Directly destroyed block from explosion: {}", originalBlockId);
+                LOGGER.info("Directly destroyed block from explosion: {}",
+                        ForgeRegistries.BLOCKS.getKey(originalState.getBlock()));
             }
 
             // 处理完成，移除标记

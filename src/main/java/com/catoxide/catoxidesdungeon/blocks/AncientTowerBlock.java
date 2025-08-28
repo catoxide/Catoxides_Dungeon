@@ -105,13 +105,9 @@ public class AncientTowerBlock extends Block {
     }
 
     private void convertToRuinedBlock(ServerLevel level, BlockPos pos, BlockState state) {
-        // 创建废墟方块
-        BlockState ruinedState = ModBlocks.ANCIENT_RUINED_BLOCK.get().defaultBlockState();
-
-        // 设置方块实体数据 - 只存储原始方块，不存储距离
-        if (level.getBlockEntity(pos) instanceof AncientRuinedBlockEntity ruinedEntity) {
-            ruinedEntity.setOriginalBlock(state.getBlock());
-        }
+        // 使用转换表获取对应的废墟方块
+        Block ruinedBlock = BlockConversionTable.getRuinedBlock(state.getBlock());
+        BlockState ruinedState = ruinedBlock.defaultBlockState();
 
         // 替换方块
         level.setBlock(pos, ruinedState, 3);
@@ -119,8 +115,8 @@ public class AncientTowerBlock extends Block {
         // 创建下坠实体
         if (level.isEmptyBlock(pos.below())) {
             FallingBlockEntity fallingBlockEntity = FallingBlockEntity.fall(level, pos, ruinedState);
-            // 如果需要，可以设置下坠实体的额外属性
-            // fallingBlockEntity.setHurtsEntities(2.0F, 40); // 设置伤害
+            // 设置伤害值
+            fallingBlockEntity.setHurtsEntities(2.0F, 40);
         }
     }
 
