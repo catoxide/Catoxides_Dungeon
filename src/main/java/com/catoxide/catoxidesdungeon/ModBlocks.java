@@ -2051,6 +2051,13 @@ public class ModBlocks {
                     .strength(0.5f) // 比原方块更容易破坏
                     .sound(SoundType.SAND))
     );
+    public static final RegistryObject<Block> RUINED_WOOD = BLOCKS.register(
+            "ruined_wood", () -> new AncientRuinedBlock(BlockBehaviour.Properties.copy(OAK_WOOD).strength(0.5f) .sound(SoundType.WOOD))
+    );
+    public static final RegistryObject<Block> RUINED_COBBLESTONE = BLOCKS.register(
+            "ruined_cobblestone", () -> new AncientRuinedBlock(BlockBehaviour.Properties.copy(COBBLESTONE).strength(0.5f) .sound(SoundType.STONE))
+    );
+
     public static final RegistryObject<Block> ANCIENT_TOWER_BLOCK = BLOCKS.register(
             "ancient_tower_block",
             () -> new AncientTowerBlock(BlockBehaviour.Properties.copy(Blocks.STONE)
@@ -2058,10 +2065,11 @@ public class ModBlocks {
                     .sound(SoundType.STONE)
                     .requiresCorrectToolForDrops())
     );
+
     public static final RegistryObject<Block> ZOMBIE_TOMB = BLOCKS.register(
             "zombie_tomb",
             () -> new ZombieTombBlock(BlockBehaviour.Properties.copy(Blocks.SPAWNER)
-                    .strength(25.0f, 1200.0f) // 高抗爆性，但可以被特殊方式破坏
+                    .strength(25.0f, 6.0f) // 高抗爆性，但可以被特殊方式破坏
                     .sound(SoundType.METAL)
                     .noOcclusion())
     );

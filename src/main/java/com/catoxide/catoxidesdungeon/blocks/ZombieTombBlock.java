@@ -43,7 +43,7 @@ public class ZombieTombBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING; // 使用原版的水平朝向属性
 
     // 不同等级的生成冷却时间（ticks）
-    private static final int[] SPAWN_COOLDOWN_BY_LEVEL = {300, 250, 200, 150, 100};
+    private static final int[] SPAWN_COOLDOWN_BY_LEVEL = {200, 180, 160, 140, 120};
 
     // 不同等级的僵尸血量倍率
     private static final double[] HEALTH_MULTIPLIER_BY_LEVEL = {1.0, 1.5, 2.0, 2.5, 3.0};
